@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EcoClasses.in — 3D Interactive Economics Portal</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            eco: {
+              50: '#f2f8f5',
+              100: '#e1f0e8',
+              500: '#3b6e52', // EcoClasses signature green from screenshot
+              600: '#2e5941',
+              700: '#244734',
+              accent: '#10b981'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Merriweather', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Theme Backgrounds */
+    body.dark-theme {
+      background: radial-gradient(circle at 50% 35%, #132a21 0%, #091318 65%, #04080b 100%);
+      color: #f8fafc;
+    }
+    body.light-theme {
+      background: radial-gradient(circle at 50% 35%, #e6f4ed 0%, #cbd5e1 100%);
+      color: #0f172a;
+    }
+
+    /* 3D Containers */
+    #webgl-container, #css3d-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    #webgl-container { z-index: 1; pointer-events: none; }
+    #css3d-container { z-index: 2; }
+
+    /* 3D Floating Panels */
+    .eco-3d-panel {
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid rgba(59, 110, 82, 0.75);
+      border-radius: 22px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(16, 185, 129, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+      user-select: text;
+    }
+    body.light-theme .eco-3d-panel {
+      background: rgba(255, 255, 255, 0.96);
+      border: 2px solid #3b6e52;
+      color: #0f172a;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18), 0 0 25px rgba(59, 110, 82, 0.15);
+    }
+    .eco-3d-panel:hover {
+      border-color: #10b981;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75), 0 0 45px rgba(16, 185, 129, 0.32);
+    }
+
+    /* Custom Scrollbars inside 3D Panels */
+    .panel-scroll {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #3b6e52 rgba(15, 23, 42, 0.3);
+    }
+    .panel-scroll::-webkit-scrollbar { width: 8px; }
+    .panel-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.2); border-radius: 8px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: #3b6e52; border-radius: 8px; }
+    .panel-scroll::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+    /* EcoClasses Authentic Worksheet & Reader Styling */
+    .reader-article h1, .reader-article h2, .reader-article h3 {
+      font-family: 'Merriweather', serif;
+      line-height: 1.35;
+    }
+    .reader-article img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      margin: 14px 0;
+    }
+    .mcq-card {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      transition: transform 0.15s ease, border-color 0.2s ease;
+    }
+    body.light-theme .mcq-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+    }
+    .mcq-option-btn {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      margin: 7px 0;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.45);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    body.light-theme .mcq-option-btn {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+    .mcq-option-btn:hover {
+      border-color: #10b981;
+      transform: translateX(4px);
+    }
+    .mcq-option-btn.selected-correct {
+      background: rgba(16, 185, 129, 0.22) !important;
+      border-color: #10b981 !important;
+      color: #10b981 !important;
+      font-weight: 600;
+    }
+    .mcq-option-btn.selected-wrong {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border-color: #ef4444 !important;
+      color: #ef4444 !important;
+    }
+    .eco-reveal-btn {
+      background-color: #3b6e52;
+      color: #ffffff;
+      font-weight: 600;
+      padding: 9px 18px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    .eco-reveal-btn:hover { background-color: #2e5941; transform: translateY(-1px); }
+
+    /* Tag Pill Styling */
+    .tag-pill {
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .tag-pill.active {
+      background-color: #3b6e52 !important;
+      color: #ffffff !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+    }
+
+    /* 2D Fallback Mode when toggled */
+    body.mode-2d #css3d-container,
+    body.mode-2d #webgl-container {
+      display: none !important;
+    }
+    #lite-2d-container {
+      display: none;
+    }
+    body.mode-2d #lite-2d-container {
+      display: grid;
+    }
+  </style>
+</head>
+<body class="dark-theme">
+
+  <!-- WebGL Background Canvas (3D Floating Grid & Particles) -->
+  <div id="webgl-container"></div>
+
+  <!-- CSS3D Interactive Panels Container -->
+  <div id="css3d-container"></div>
+
+  <!-- TOP HUD: EcoClasses Header, Camera Controls & Live Status -->
+  <header class="fixed top-0 left-0 right-0 z-30 pointer-events-none px-3 pt-2.5 md:px-6 md:pt-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 bg-slate-900/85 dark:bg-slate-900/85 backdrop-blur-md border border-emerald-500/30 rounded-2xl px-3.5 py-2.5 shadow-2xl pointer-events-auto">
+      
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-eco-500 flex items-center justify-center text-white font-serif font-black text-xl shadow-md shadow-emerald-900/50">
+          E
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-serif font-bold text-base md:text-lg tracking-tight text-white">EcoClasses<span class="text-emerald-400">.in</span></span>
+            <span id="feed-status-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Connecting...
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">3D Interactive Study Deck • CBSE 11 & 12 • CUET • UGC NET Economics</p>
+        </div>
+      </div>
+
+      <!-- 3D Camera Quick-Snap Controls -->
+      <div id="camera-controls-bar" class="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700">
+        <button onclick="focusPanel('left')" id="cam-btn-left" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:bg-eco-500 hover:text-white transition flex items-center gap-1.5" title="Focus Syllabus & Notes Panel">
+          <i class="fa-solid fa-book-open text-emerald-400"></i>
+          <span class="hidden md:inline">1. Syllabus & Notes</span>
+          <span class="md:hidden">Notes</span>
+        </button>
+        <button onclick="focusPanel('center')" id="cam-btn-center" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-eco-500 text-white transition flex items-center gap-1.5" title="Focus Main Interactive Reader">
+          <i class="fa-solid fa-desktop"></i>
+          <span class="hidden md:inline">2. Main Reader</span>
+          <span class="md:hidden">Reader</span>
+        </button>
+        <button onclick="focusPanel('right')" id="cam-btn-right" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:bg-eco-500 hover:text-white transition flex items-center gap-1.5" title="Focus MCQs & Worksheets Panel">
+          <i class="fa-solid fa-list-check text-amber-400"></i>
+          <span class="hidden md:inline">3. MCQ Arena</span>
+          <span class="md:hidden">MCQs</span>
+        </button>
+        <button onclick="focusPanel('overview')" id="cam-btn-overview" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:bg-eco-500 hover:text-white transition flex items-center gap-1.5" title="Full 3D Cockpit Overview">
+          <i class="fa-solid fa-cubes"></i>
+          <span class="hidden lg:inline">Full 3D Deck</span>
+        </button>
+      </div>
+
+      <!-- Right Utility Actions -->
+      <div class="flex items-center gap-2">
+        <!-- Score Tracker Pill -->
+        <div class="hidden xl:flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs">
+          <i class="fa-solid fa-trophy text-amber-400"></i>
+          <span class="text-slate-300">MCQ Score:</span>
+          <span id="global-mcq-score" class="font-bold text-emerald-400">0 / 0</span>
+        </div>
+
+        <!-- 3D / 2D Lite Switch -->
+        <button onclick="toggleDimensionMode()" id="dimension-toggle-btn" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-vr-cardboard"></i>
+          <span id="dimension-label">2D Lite</span>
+        </button>
+
+        <!-- Theme Switch (Matches EcoClasses floating Dark pill) -->
+        <button onclick="toggleTheme()" id="theme-toggle-btn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+          <span id="theme-text" class="hidden sm:inline">Light</span>
+        </button>
+
+        <!-- Blogger Install Code Modal Trigger -->
+        <button onclick="openInstallModal()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-eco-500 hover:bg-eco-600 text-white shadow-lg shadow-emerald-950/50 transition flex items-center gap-1.5">
+          <i class="fa-brands fa-blogger-b"></i>
+          <span class="hidden sm:inline">Add to Blogger</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2D LITE FALLBACK VIEW (For students who toggle 2D mode or older devices) -->
+  <main id="lite-2d-container" class="fixed inset-0 pt-20 pb-20 px-4 max-w-7xl mx-auto grid-cols-1 lg:grid-cols-12 gap-4 z-20 overflow-hidden">
+    <div id="lite-left-slot" class="lg:col-span-3 h-full overflow-hidden"></div>
+    <div id="lite-center-slot" class="lg:col-span-6 h-full overflow-hidden"></div>
+    <div id="lite-right-slot" class="lg:col-span-3 h-full overflow-hidden"></div>
+  </main>
+
+  <!-- BOTTOM DOCK BAR: Modelled directly on EcoClasses' Mobile Navigation Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30 pointer-events-none px-3 pb-2.5">
+    <div class="max-w-2xl mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl px-2 py-1.5 flex items-center justify-around pointer-events-auto">
+      
+      <button onclick="dockAction('home')" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Home</span>
+      </button>
+
+      <button onclick="dockAction('syllabus')" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">📚</span>
+        <span class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Syllabus</span>
+      </button>
+
+      <button onclick="dockAction('search')" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">🔍</span>
+        <span class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Search</span>
+      </button>
+
+      <button onclick="dockAction('practice')" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">📝</span>
+        <span class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Practice</span>
+      </button>
+
+      <button onclick="dockAction('economists')" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">🏛️</span>
+        <span class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Economists</span>
+      </button>
+
+      <button onclick="dockAction('voice')" id="voice-nav-btn" class="flex flex-col items-center py-1 px-3 rounded-xl hover:bg-emerald-500/10 transition group">
+        <span class="text-lg">🎙️</span>
+        <span id="voice-nav-label" class="text-[10px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 group-hover:text-emerald-400">Voice Nav</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- BLOGGER EMBED INSTRUCTIONS MODAL -->
+  <div id="install-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl max-w-2xl w-full p-6 text-slate-100 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-brands fa-blogger text-2xl text-amber-500"></i>
+          <h3 class="text-lg font-bold">How to Add This 3D Portal to EcoClasses.in</h3>
+        </div>
+        <button onclick="closeInstallModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+        <div class="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 text-emerald-200">
+          <strong>Good news!</strong> This single file is already pre-configured with your live domain (<code>https://www.ecoclasses.in</code>) and all 49 of your Economics labels. Every new post or MCQ worksheet you publish on Blogger automatically appears in this 3D panel.
+        </div>
+
+        <h4 class="font-bold text-white text-base">Method 1: Create a Dedicated 3D Page on Blogger (2 Minutes)</h4>
+        <ol class="list-decimal list-inside space-y-2 text-slate-300">
+          <li>Open your <strong>Blogger Dashboard</strong> for <code>ecoclasses.in</code> and go to <strong>Pages</strong> → <strong>New Page</strong>.</li>
+          <li>Title the page <code>3D Portal</code> (your link will become <code>ecoclasses.in/p/3d-portal.html</code>).</li>
+          <li>Switch the editor from <em>Compose view</em> to <strong>HTML view</strong> (top-left pencil icon).</li>
+          <li>Paste the full code of this file inside, or host this HTML file on free GitHub Pages / Vercel and paste this responsive full-screen iframe snippet:</li>
+        </ol>
+
+        <div class="relative bg-slate-950 p-3.5 rounded-xl border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto">
+<pre id="blogger-snippet-code">&lt;!-- Paste inside a Blogger Page (HTML View) --&gt;
+&lt;style&gt;
+  /* Hide standard Blogger header/sidebar on the 3D Page */
+  body, html { margin: 0; padding: 0; overflow: hidden; }
+  #ecoclasses-3d-frame {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    border: none; z-index: 999999;
+  }
+&lt;/style&gt;
+&lt;iframe id="ecoclasses-3d-frame" src="YOUR_HOSTED_3D_PORTAL_URL" allow="microphone"&gt;&lt;/iframe&gt;</pre>
+          <button onclick="copySnippet()" id="copy-snippet-btn" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-eco-500 hover:bg-eco-600 text-white font-sans text-xs">
+            Copy Snippet
+          </button>
+        </div>
+
+        <h4 class="font-bold text-white text-base">Method 2: Add a Floating "🚀 3D Study Deck" Button to Your Current Theme</h4>
+        <p class="text-xs text-slate-400">Add a floating button next to your existing Dark Mode toggle so students can jump into 3D mode anytime.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- THREE.JS & CSS3DRENDERER IMPORT MAP -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /********************************************************************
+     * 1. ECOCLASSES.IN EXACT TAXONOMY (49 TAGS ORGANIZED FOR STUDENTS)
+     ********************************************************************/
+    const BLOG_BASE_URL = 'https://www.ecoclasses.in';
+
+    const TAG_GROUPS = {
+      exams: [
+        { label: 'All Posts', tag: 'ALL', count: 'All' },
+        { label: 'CBSE Class 12', tag: 'CBSE Class 12 Economics', count: 22 },
+        { label: 'CBSE Class 11', tag: 'CBSE Class 11 Economics', count: 1 },
+        { label: 'CLASS 11 Eco', tag: 'CLASS 11 Economics', count: 4 },
+        { label: 'CBSE Economics', tag: 'CBSE Economics', count: 8 },
+        { label: 'CUET Economics', tag: 'CUET Economics', count: 9 },
+        { label: 'CUET Prep', tag: 'CUET Preparation', count: 9 },
+        { label: 'UGC NET Eco', tag: 'UGC NET Economics', count: 10 },
+        { label: 'UGC NET Macro', tag: 'UGC NET MACROECONOMICS', count: 2 },
+        { label: 'UGC NET Micro', tag: 'UGC NET MICROECONOMICS', count: 1 }
+      ],
+      subjects: [
+        { label: 'Macroeconomics', tag: 'Macroeconomics', count: 25 },
+        { label: 'Indian Economic Dev', tag: 'Indian Economic Development', count: 10 },
+        { label: 'History of Eco Thought', tag: 'History of Economic Thought', count: 9 },
+        { label: 'Microeconomics', tag: 'microeconomics', count: 5 },
+        { label: 'National Income', tag: 'NATIONAL INCOME', count: 5 },
+        { label: 'Money & Banking', tag: 'MONEY AND BANKING', count: 3 },
+        { label: 'Foreign Exchange Rate', tag: 'Foreign Exchange Rate', count: 3 },
+        { label: 'Government Budget', tag: 'Government Budget', count: 1 },
+        { label: 'India, Pak & China', tag: 'Comparative Study of India Pakistan and china', count: 1 },
+        { label: 'Environment & Sust. Dev', tag: 'Environment and Sustainable Development', count: 1 },
+        { label: 'Statistics for Eco', tag: 'Statistics for Economics', count: 1 },
+        { label: 'Consumer Behaviour', tag: 'Consumer behaviour', count: 1 },
+        { label: 'Production Function', tag: 'production Function', count: 1 },
+        { label: 'Market Structure', tag: 'Market Structure', count: 1 },
+        { label: 'General Equilibrium', tag: 'General Equilibrium', count: 1 },
+        { label: 'Comparative Advantage', tag: 'Comparative Advantage', count: 1 },
+        { label: 'Demography', tag: 'Demography', count: 1 },
+        { label: 'Health Economics', tag: 'Health Economics', count: 1 }
+      ],
+      economists: [
+        { label: 'Adam Smith', tag: 'Adam Smith', era: 'Classical Economics' },
+        { label: 'J.M. Keynes', tag: 'J.M. Keynes', era: 'Keynesian Economics' },
+        { label: 'Karl Marx', tag: 'Karl Marx', era: 'Socialist Thought' },
+        { label: 'Milton Friedman', tag: 'Milton Friedman', era: 'Monetarism' },
+        { label: 'David Ricardo', tag: 'David Ricardo', era: 'Comparative Advantage' },
+        { label: 'F.A. Hayek', tag: 'F.A. Hayek', era: 'Austrian Economics' },
+        { label: 'Joseph Schumpeter', tag: 'Joseph Schumpeter', era: 'Evolutionary Economics' },
+        { label: 'Paul Samuelson', tag: 'Paul Samuelson', era: 'Neoclassical Synthesis' },
+        { label: 'Thomas Malthus', tag: 'Thomas Malthus', era: 'Demography' },
+        { label: 'John Stuart Mill', tag: 'John Stuart Mill', era: 'Classical Economics' },
+        { label: 'Kenneth Arrow', tag: 'Kenneth Arrow', era: 'General Equilibrium' }
+      ],
+      practiceTags: [
+        'MCQ', 'MCQs', 'MCQ Worksheet', 'Interactive Worksheets',
+        'Important Questions', 'Mind Maps', 'Toppers Strategy', 'CUET Preparation'
+      ]
+    };
+
+    /********************************************************************
+     * 2. BUILT-IN ECOCLASSES FALLBACK POSTS (Matches Screenshot & Tags)
+     *    Used immediately while live Blogger JSONP loads, or if offline.
+     ********************************************************************/
+    const FALLBACK_POSTS = [
+      {
+        id: 'eco-post-1',
+        title: 'Interactive Revision Worksheet: 50 MCQs — Comparative Development Experiences of India, Pakistan & China',
+        published: '2025-02-18',
+        url: 'https://www.ecoclasses.in',
+        tags: ['CBSE Class 12 Economics', 'Indian Economic Development', 'Comparative Study of India Pakistan and china', 'MCQ', 'MCQs', 'MCQ Worksheet', 'Interactive Worksheets', 'CUET Economics'],
+        isMcq: true,
+        questions: [
+          {
+            q: '1. In which year did India announce its First Five Year Plan?',
+            options: ['a) 1947', 'b) 1951', 'c) 1956', 'd) 1991'],
+            correctIndex: 1,
+            explanation: 'India announced its First Five Year Plan in 1951 (1951–1956), focusing primarily on the agrarian sector.'
+          },
+          {
+            q: '2. When was the People\'s Republic of China established?',
+            options: ['a) 1947', 'b) 1949', 'c) 1953', 'd) 1958'],
+            correctIndex: 1,
+            explanation: 'The People\'s Republic of China (PRC) was established on October 1, 1949 under the leadership of Mao Zedong.'
+          },
+          {
+            q: '3. Which campaign was initiated in China in 1958 aimed at industrialising the country on a massive scale?',
+            options: ['a) Great Proletarian Cultural Revolution', 'b) Great Leap Forward (GLF)', 'c) Special Economic Zones (SEZ)', 'd) Commune System Reform'],
+            correctIndex: 1,
+            explanation: 'The Great Leap Forward (GLF) campaign was initiated in 1958 to modernize China\'s economy through rapid industrialization and backyard furnaces.'
+          },
+          {
+            q: '4. In which year did Pakistan announce its First Five Year Plan (Medium Term Development Plan)?',
+            options: ['a) 1951', 'b) 1953', 'c) 1956', 'd) 1958'],
+            correctIndex: 2,
+            explanation: 'Pakistan announced its first Five Year Plan in 1956, whereas China announced its first plan in 1953 and India in 1951.'
+          },
+          {
+            q: '5. Which of the following countries has the highest value on the Human Development Index (HDI) among the three neighbors?',
+            options: ['a) India', 'b) Pakistan', 'c) China', 'd) All have equal HDI'],
+            correctIndex: 2,
+            explanation: 'China ranks significantly higher in HDI, life expectancy, GDP per capita, and adult literacy rate compared to India and Pakistan.'
+          },
+          {
+            q: '6. When were economic reforms (New Economic Policy / Opening Up) introduced in China?',
+            options: ['a) 1978', 'b) 1988', 'c) 1991', 'd) 1966'],
+            correctIndex: 0,
+            explanation: 'China introduced structured economic reforms in 1978 under Deng Xiaoping, whereas Pakistan initiated reforms in 1988 and India in 1991.'
+          }
+        ],
+        content: ''
+      },
+      {
+        id: 'eco-post-2',
+        title: 'National Income Accounting: Complete Formula Sheet, Value Added, Income & Expenditure Methods',
+        published: '2025-02-12',
+        url: 'https://www.ecoclasses.in',
+        tags: ['CBSE Class 12 Economics', 'Macroeconomics', 'NATIONAL INCOME', 'CUET Economics', 'Mind Maps', 'Important Questions'],
+        isMcq: false,
+        content: `
+          <div class="space-y-4">
+            <div class="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30">
+              <h4 class="font-bold text-emerald-400 mb-1">📌 Three Golden Conversion Rules of National Income</h4>
+              <ul class="list-disc list-inside text-sm space-y-1.5">
+                <li><strong>Gross to Net:</strong> Subtract Depreciation (Consumption of Fixed Capital) → <code>Net = Gross - Depreciation</code></li>
+                <li><strong>Domestic to National:</strong> Add Net Factor Income from Abroad (NFIA) → <code>National = Domestic + NFIA</code></li>
+                <li><strong>Market Price (MP) to Factor Cost (FC):</strong> Subtract Net Indirect Taxes (NIT) → <code>FC = MP - (Indirect Taxes - Subsidies)</code></li>
+              </ul>
+            </div>
+            <h3 class="text-lg font-bold text-emerald-400">1. Value Added (Product) Method</h3>
+            <p class="text-sm leading-relaxed">Calculates National Income by summing the Gross Value Added at Market Price (GVAmp) across Primary, Secondary, and Tertiary sectors.</p>
+            <pre class="p-3 rounded-lg bg-slate-950 text-emerald-300 text-xs overflow-x-auto">GVAmp = Value of Output (Sales + Change in Stock) - Intermediate Consumption
+NNPfc (National Income) = ∑GVAmp - Depreciation + NFIA - NIT</pre>
+
+            <h3 class="text-lg font-bold text-emerald-400">2. Income Method</h3>
+            <p class="text-sm leading-relaxed">Sums factor incomes earned by normal residents: Compensation of Employees (COE) + Operating Surplus (Rent + Interest + Profit) + Mixed Income of Self-Employed = <strong>NDPfc</strong>.</p>
+
+            <h3 class="text-lg font-bold text-emerald-400">3. Expenditure Method</h3>
+            <p class="text-sm leading-relaxed">Sums final expenditures on GDPmp: Private Final Consumption Expenditure (PFCE) + Government Final Consumption Expenditure (GFCE) + Gross Domestic Capital Formation (GDCF) + Net Exports (X - M).</p>
+          </div>
+        `
+      },
+      {
+        id: 'eco-post-3',
+        title: 'Money and Banking: Credit Creation by Commercial Banks & RBI Monetary Policy Tools (MCQs + Notes)',
+        published: '2025-02-05',
+        url: 'https://www.ecoclasses.in',
+        tags: ['CBSE Class 12 Economics', 'Macroeconomics', 'MONEY AND BANKING', 'MCQs', 'CUET Economics', 'UGC NET MACROECONOMICS'],
+        isMcq: true,
+        questions: [
+          {
+            q: '1. If the Legal Reserve Ratio (LRR) is 20%, what is the value of the Money Multiplier?',
+            options: ['a) 2', 'b) 4', 'c) 5', 'd) 10'],
+            correctIndex: 2,
+            explanation: 'Money Multiplier = 1 / LRR = 1 / 0.20 = 5.'
+          },
+          {
+            q: '2. To curb inflation in the economy, how should the Reserve Bank of India (RBI) adjust the Repo Rate?',
+            options: ['a) Increase the Repo Rate', 'b) Decrease the Repo Rate', 'c) Purchase Government Securities in Open Market', 'd) Reduce Cash Reserve Ratio (CRR)'],
+            correctIndex: 0,
+            explanation: 'Increasing the Repo Rate makes borrowing costlier for commercial banks, contracting credit availability and curbing inflation.'
+          },
+          {
+            q: '3. Which of the following is a qualitative instrument of credit control used by the Central Bank?',
+            options: ['a) Bank Rate', 'b) Open Market Operations', 'c) Margin Requirements', 'd) Statutory Liquidity Ratio (SLR)'],
+            correctIndex: 2,
+            explanation: 'Margin Requirements, Moral Suasion, and Selective Credit Controls are qualitative tools, whereas CRR, SLR, Repo, and OMO are quantitative tools.'
+          }
+        ],
+        content: ''
+      },
+      {
+        id: 'eco-post-4',
+        title: 'History of Economic Thought: From Adam Smith & David Ricardo to Keynes, Hayek & Milton Friedman',
+        published: '2025-01-29',
+        url: 'https://www.ecoclasses.in',
+        tags: ['History of Economic Thought', 'Adam Smith', 'David Ricardo', 'J.M. Keynes', 'F.A. Hayek', 'Milton Friedman', 'Joseph Schumpeter', 'Paul Samuelson', 'Karl Marx', 'Thomas Malthus', 'John Stuart Mill', 'Kenneth Arrow', 'UGC NET Economics', 'Classical Economics', 'Keynesian Economics', 'Monetarism', 'Austrian Economics'],
+        isMcq: false,
+        content: `
+          <div class="space-y-4 text-sm leading-relaxed">
+            <p>Explore the foundational pillars of economic theory curated for <strong>UGC NET Economics</strong> and <strong>CUET</strong> aspirants:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">🏛️ Adam Smith (1723–1790)</h4>
+                <p class="text-xs mt-1">Father of Modern Economics. Authored <em>The Wealth of Nations (1776)</em>. Introduced the <strong>Invisible Hand</strong>, Division of Labour, and Absolute Cost Advantage.</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">⚖️ David Ricardo (1772–1823)</h4>
+                <p class="text-xs mt-1">Developed the <strong>Theory of Comparative Advantage</strong>, Ricardian Theory of Rent, and Ricardian Equivalence.</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">📈 J.M. Keynes (1883–1946)</h4>
+                <p class="text-xs mt-1">Authored <em>The General Theory of Employment, Interest and Money (1936)</em>. Advocated fiscal stimulus, Effective Demand, and Liquidity Preference.</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">💵 Milton Friedman (1912–2006)</h4>
+                <p class="text-xs mt-1">Leader of the Chicago School & <strong>Monetarism</strong>. Formulated the Permanent Income Hypothesis and Natural Rate of Unemployment.</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">⚡ Joseph Schumpeter & F.A. Hayek</h4>
+                <p class="text-xs mt-1">Schumpeter pioneered <strong>Creative Destruction</strong> & Innovation Waves; Hayek championed spontaneous order and price signals in <em>Austrian Economics</em>.</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-800/70 border border-slate-700">
+                <h4 class="font-bold text-emerald-400">🌐 Paul Samuelson & Kenneth Arrow</h4>
+                <p class="text-xs mt-1">Samuelson built the <strong>Neoclassical Synthesis</strong> & Revealed Preference; Arrow co-developed the Arrow-Debreu <strong>General Equilibrium</strong> & Impossibility Theorem.</p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 'eco-post-5',
+        title: 'Foreign Exchange Rate & Balance of Payments: Fixed vs Flexible Regime & Currency Depreciation',
+        published: '2025-01-20',
+        url: 'https://www.ecoclasses.in',
+        tags: ['CBSE Class 12 Economics', 'Macroeconomics', 'Foreign Exchange Rate', 'Government Budget', 'CUET Economics', 'CBSE Economics'],
+        isMcq: false,
+        content: `
+          <div class="space-y-3 text-sm leading-relaxed">
+            <h4 class="font-bold text-emerald-400 text-base">Currency Depreciation vs Devaluation</h4>
+            <p><strong>Depreciation:</strong> Fall in the value of domestic currency in terms of foreign currency due to market forces of demand and supply under a <em>Flexible Exchange Rate System</em>. Impact: Domestic exports become cheaper and rise!</p>
+            <p><strong>Devaluation:</strong> Deliberate reduction in the value of domestic currency by the government/Central Bank under a <em>Fixed Exchange Rate System</em>.</p>
+            <div class="p-3 rounded-xl bg-slate-800/70 border border-slate-700">
+              <strong>Managed Floating (Dirty Floating):</strong> A hybrid of fixed and flexible exchange rate systems where the market determines the rate, but the RBI intervenes by buying/selling foreign exchange to prevent excessive volatility.
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 'eco-post-6',
+        title: 'Class 11 Microeconomics & Statistics: Consumer Equilibrium, Production Function & Elasticity',
+        published: '2025-01-14',
+        url: 'https://www.ecoclasses.in',
+        tags: ['CBSE Class 11 Economics', 'CLASS 11 Economics', 'microeconomics', 'Consumer behaviour', 'production Function', 'Market Structure', 'Statistics for Economics', 'UGC NET MICROECONOMICS'],
+        isMcq: false,
+        content: `
+          <div class="space-y-3 text-sm leading-relaxed">
+            <h4 class="font-bold text-emerald-400 text-base">Conditions for Consumer Equilibrium (Indifference Curve Analysis)</h4>
+            <ul class="list-disc list-inside space-y-1">
+              <li><strong>Condition 1:</strong> <code>MRSxy = Px / Py</code> (Slope of Indifference Curve equals Slope of Budget Line).</li>
+              <li><strong>Condition 2:</strong> Indifference Curve must be convex to the origin at the point of tangency (Diminishing Marginal Rate of Substitution).</li>
+            </ul>
+            <h4 class="font-bold text-emerald-400 text-base mt-3">Law of Variable Proportions (Short-Run Production Function)</h4>
+            <p>Explains the relationship between Total Product (TP) and Marginal Product (MP) across Three Stages: Increasing Returns, Diminishing Returns (Rational Producer Stage), and Negative Returns.</p>
+          </div>
+        `
+      }
+    ];
+
+    /********************************************************************
+     * 3. GLOBAL APPLICATION STATE
+     ********************************************************************/
+    let allPosts = [...FALLBACK_POSTS];
+    let activeTag = 'ALL';
+    let searchQuery = '';
+    let currentPost = FALLBACK_POSTS[0];
+    let mcqCorrectCount = 0;
+    let mcqAttemptedCount = 0;
+    let is2DMode = false;
+
+    /********************************************************************
+     * 4. THREE.JS + CSS3D CURVED COCKPIT SETUP
+     ********************************************************************/
+    const webglContainer = document.getElementById('webgl-container');
+    const css3dContainer = document.getElementById('css3d-container');
+
+    // Scenes & Camera
+    const webglScene = new THREE.Scene();
+    const css3dScene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 1, 6000);
+    // Responsive default camera position
+    const isMobileScreen = window.innerWidth < 800;
+    const targetCameraPos = new THREE.Vector3(0, 10, isMobileScreen ? 1550 : 1480);
+    const targetLookAt = new THREE.Vector3(0, 0, 0);
+    camera.position.copy(targetCameraPos);
+
+    // WebGL Renderer (Background Grid + Floating Economics Nodes)
+    const webglRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    webglRenderer.setSize(window.innerWidth, window.innerHeight);
+    webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    webglContainer.appendChild(webglRenderer.domElement);
+
+    // CSS3D Renderer (Crisp Interactive HTML Panels)
+    const css3dRenderer = new CSS3DRenderer();
+    css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+    css3dContainer.appendChild(css3dRenderer.domElement);
+
+    // OrbitControls
+    const controls = new OrbitControls(camera, css3dRenderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.minDistance = 550;
+    controls.maxDistance = 2600;
+    controls.maxPolarAngle = Math.PI / 2 + 0.25;
+    controls.minPolarAngle = Math.PI / 2 - 0.45;
+
+    // Add 3D Ambient Grid & Floating Economics Supply/Demand Bars in WebGL
+    const gridHelper = new THREE.GridHelper(3600, 45, 0x10b981, 0x1e3a2f);
+    gridHelper.position.y = -420;
+    webglScene.add(gridHelper);
+
+    // Floating 3D Geometric Nodes in the background
+    const floatingShapes = [];
+    const shapeGeo = new THREE.OctahedronGeometry(26, 0);
+    const shapeMat = new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true, transparent: true, opacity: 0.28 });
+    for (let i = 0; i < 18; i++) {
+      const mesh = new THREE.Mesh(shapeGeo, shapeMat);
+      mesh.position.set(
+        (Math.random() - 0.5) * 2800,
+        (Math.random() - 0.5) * 1100,
+        -350 - Math.random() * 900
+      );
+      mesh.userData = { speedY: 0.004 + Math.random() * 0.008, offset: Math.random() * Math.PI * 2 };
+      webglScene.add(mesh);
+      floatingShapes.push(mesh);
+    }
+
+    /********************************************************************
+     * 5. BUILD THE 3 INTERACTIVE 3D PANELS
+     ********************************************************************/
+    function createInteractiveDOMPanel(width, height, htmlContent) {
+      const el = document.createElement('div');
+      el.className = 'eco-3d-panel';
+      el.style.width = `${width}px`;
+      el.style.height = `${height}px`;
+      el.innerHTML = htmlContent;
+
+      // Prevent OrbitControls from stealing scroll or click events inside the panel
+      ['pointerdown', 'mousedown', 'touchstart', 'wheel'].forEach(evtName => {
+        el.addEventListener(evtName, (e) => e.stopPropagation());
+      });
+      return el;
+    }
+
+    // LEFT PANEL: Syllabus, Exam Tracks, Economists & All 49 Blogger Tags
+    const leftPanelDOM = createInteractiveDOMPanel(460, 720, `
+      <div class="p-4 border-b border-slate-700/60 flex items-center justify-between bg-emerald-950/30">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-eco-500 text-white flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span>
+          <div>
+            <h2 class="font-bold text-base leading-tight">Syllabus & Study Notes</h2>
+            <p class="text-[11px] opacity-70">Filter by CBSE, CUET, UGC NET & Topic</p>
+          </div>
+        </div>
+        <span id="notes-count-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-eco-500/20 text-emerald-400 border border-emerald-500/30">0 Posts</span>
+      </div>
+
+      <!-- Search Input -->
+      <div class="px-4 pt-3 pb-2">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+          <input id="eco-search-input" type="text" placeholder="Search Macroeconomics, Keynes, China, National Income..." 
+            class="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-800/80 dark:bg-slate-800/80 border border-slate-700 text-xs focus:outline-none focus:border-emerald-400 transition">
+          <button id="clear-search-btn" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs px-1">✕</button>
+        </div>
+      </div>
+
+      <!-- Category Group Tabs -->
+      <div class="px-4 py-1.5 flex gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-700/40 text-xs">
+        <button onclick="switchLeftTab('exams')" id="tab-btn-exams" class="px-2.5 py-1 rounded-lg font-semibold bg-eco-500 text-white">🎓 Exams</button>
+        <button onclick="switchLeftTab('subjects')" id="tab-btn-subjects" class="px-2.5 py-1 rounded-lg font-medium bg-slate-800/60 hover:bg-slate-700">📊 Subjects</button>
+        <button onclick="switchLeftTab('economists')" id="tab-btn-economists" class="px-2.5 py-1 rounded-lg font-medium bg-slate-800/60 hover:bg-slate-700">🏛️ Economists (11)</button>
+      </div>
+
+      <!-- Tag Filter Cloud -->
+      <div id="left-tag-cloud" class="px-4 py-2.5 flex flex-wrap gap-1.5 max-h-36 panel-scroll border-b border-slate-700/50"></div>
+
+      <!-- Filtered Posts List -->
+      <div id="left-posts-list" class="flex-1 p-4 space-y-2.5 panel-scroll"></div>
+    `);
+
+    // CENTER PANEL: Main EcoClasses Reader & Interactive MCQ Worksheet Deck
+    const centerPanelDOM = createInteractiveDOMPanel(720, 740, `
+      <div class="p-4 border-b border-slate-700/60 flex flex-wrap items-center justify-between gap-2 bg-emerald-950/30">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-eco-500 text-white flex items-center justify-center"><i class="fa-solid fa-graduation-cap"></i></span>
+          <div>
+            <h2 class="font-bold text-base leading-tight">EcoClasses Interactive Reader & Worksheet</h2>
+            <p id="reader-breadcrumb" class="text-[11px] opacity-75">CBSE Class 12 • Indian Economic Development</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="resetCurrentWorksheet()" id="reset-mcq-btn" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition">
+            <i class="fa-solid fa-rotate-right mr-1"></i>Reset Quiz
+          </button>
+          <a id="open-original-post-link" href="https://www.ecoclasses.in" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-eco-500 hover:bg-eco-600 text-white transition flex items-center gap-1">
+            <span>Open on Blog</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Reader Body -->
+      <div id="center-reader-body" class="flex-1 p-6 panel-scroll reader-article"></div>
+    `);
+
+    // RIGHT PANEL: Practice Arena (MCQs, Mind Maps, Worksheets & Hall of Economists)
+    const rightPanelDOM = createInteractiveDOMPanel(460, 720, `
+      <div class="p-4 border-b border-slate-700/60 flex items-center justify-between bg-emerald-950/30">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold"><i class="fa-solid fa-bolt"></i></span>
+          <div>
+            <h2 class="font-bold text-base leading-tight">Practice Arena & MCQs</h2>
+            <p class="text-[11px] opacity-70">Interactive Worksheets • Mind Maps • CUET</p>
+          </div>
+        </div>
+        <span id="mcq-count-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">MCQs</span>
+      </div>
+
+      <!-- Quick Filter Pills for Practice -->
+      <div class="px-4 py-2.5 flex flex-wrap gap-1.5 border-b border-slate-700/50">
+        <button onclick="filterByTag('MCQ')" class="tag-pill text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-eco-500 text-emerald-300 border border-slate-700">📝 All MCQs</button>
+        <button onclick="filterByTag('Interactive Worksheets')" class="tag-pill text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-eco-500 text-emerald-300 border border-slate-700">⚡ Interactive Worksheets</button>
+        <button onclick="filterByTag('Mind Maps')" class="tag-pill text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-eco-500 text-emerald-300 border border-slate-700">🧠 Mind Maps</button>
+        <button onclick="filterByTag('CUET Economics')" class="tag-pill text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-eco-500 text-emerald-300 border border-slate-700">🎯 CUET Prep</button>
+        <button onclick="filterByTag('UGC NET Economics')" class="tag-pill text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-eco-500 text-emerald-300 border border-slate-700">🎓 UGC NET</button>
+      </div>
+
+      <!-- Practice & MCQ Post Cards -->
+      <div id="right-practice-list" class="flex-1 p-4 space-y-2.5 panel-scroll"></div>
+    `);
+
+    // Position the 3 Panels in a Curved 3D Cockpit Arc
+    const leftCSSObj = new CSS3DObject(leftPanelDOM);
+    leftCSSObj.position.set(-660, 0, 140);
+    leftCSSObj.rotation.y = 0.42;
+    css3dScene.add(leftCSSObj);
+
+    const centerCSSObj = new CSS3DObject(centerPanelDOM);
+    centerCSSObj.position.set(0, 0, 0);
+    centerCSSObj.rotation.y = 0;
+    css3dScene.add(centerCSSObj);
+
+    const rightCSSObj = new CSS3DObject(rightPanelDOM);
+    rightCSSObj.position.set(660, 0, 140);
+    rightCSSObj.rotation.y = -0.42;
+    css3dScene.add(rightCSSObj);
+
+    /********************************************************************
+     * 6. SMOOTH 3D CAMERA FOCUS PRESETS
+     ********************************************************************/
+    const CAMERA_PRESETS = {
+      left: {
+        pos: new THREE.Vector3(-420, 0, 760),
+        look: new THREE.Vector3(-640, 0, 120)
+      },
+      center: {
+        pos: new THREE.Vector3(0, 0, 920),
+        look: new THREE.Vector3(0, 0, 0)
+      },
+      right: {
+        pos: new THREE.Vector3(420, 0, 760),
+        look: new THREE.Vector3(640, 0, 120)
+      },
+      overview: {
+        pos: new THREE.Vector3(0, 20, 1480),
+        look: new THREE.Vector3(0, 0, 0)
+      }
+    };
+
+    let isCameraTransitioning = false;
+
+    window.focusPanel = function(panelKey) {
+      const preset = CAMERA_PRESETS[panelKey] || CAMERA_PRESETS.overview;
+      targetCameraPos.copy(preset.pos);
+      targetLookAt.copy(preset.look);
+      isCameraTransitioning = true;
+
+      // Update active button styling
+      ['left', 'center', 'right', 'overview'].forEach(k => {
+        const btn = document.getElementById(`cam-btn-${k}`);
+        if (btn) {
+          if (k === panelKey) {
+            btn.classList.add('bg-eco-500', 'text-white');
+          } else {
+            btn.classList.remove('bg-eco-500', 'text-white');
+          }
+        }
+      });
+    };
+
+    // Stop camera auto-glide if user manually drags to orbit
+    css3dRenderer.domElement.addEventListener('pointerdown', () => {
+      isCameraTransitioning = false;
+    });
+
+    /********************************************************************
+     * 7. RENDERING TAG CLOUD, POST LISTS & INTERACTIVE MCQ ENGINE
+     ********************************************************************/
+    let currentLeftTab = 'exams';
+
+    window.switchLeftTab = function(tabName) {
+      currentLeftTab = tabName;
+      ['exams', 'subjects', 'economists'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (btn) {
+          btn.className = (t === tabName)
+            ? 'px-2.5 py-1 rounded-lg font-semibold bg-eco-500 text-white'
+            : 'px-2.5 py-1 rounded-lg font-medium bg-slate-800/60 hover:bg-slate-700';
+        }
+      });
+      renderLeftTagCloud();
+    };
+
+    function renderLeftTagCloud() {
+      const cloudEl = document.getElementById('left-tag-cloud');
+      if (!cloudEl) return;
+      const items = TAG_GROUPS[currentLeftTab] || TAG_GROUPS.exams;
+      cloudEl.innerHTML = items.map(item => {
+        const isActive = activeTag.toLowerCase() === item.tag.toLowerCase();
+        const extraBadge = item.count ? `<span class="opacity-60 ml-1">(${item.count})</span>` : '';
+        return `
+          <button onclick="filterByTag('${item.tag.replace(/'/g, "\\'")}')" 
+            class="tag-pill ${isActive ? 'active' : ''} text-[11px] px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 hover:border-emerald-400">
+            ${item.label}${extraBadge}
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.filterByTag = function(tag) {
+      activeTag = tag;
+      renderLeftTagCloud();
+      renderPostLists();
+    };
+
+    function renderPostLists() {
+      const leftList = document.getElementById('left-posts-list');
+      const rightList = document.getElementById('right-practice-list');
+      const notesBadge = document.getElementById('notes-count-badge');
+      const mcqBadge = document.getElementById('mcq-count-badge');
+      if (!leftList || !rightList) return;
+
+      // Filter posts for Left Panel based on activeTag and searchQuery
+      const filteredLeft = allPosts.filter(post => {
+        const matchesTag = activeTag === 'ALL' || post.tags.some(t => t.toLowerCase() === activeTag.toLowerCase());
+        const matchesSearch = !searchQuery ||
+          post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesTag && matchesSearch;
+      });
+
+      notesBadge.textContent = `${filteredLeft.length} Posts`;
+
+      if (filteredLeft.length === 0) {
+        leftList.innerHTML = `
+          <div class="p-6 text-center rounded-xl bg-slate-800/40 border border-slate-700/50">
+            <p class="text-sm font-semibold text-emerald-400">No posts under "${activeTag}" in local cache</p>
+            <p class="text-xs opacity-75 mt-1">Click below to fetch this exact label live from EcoClasses.in:</p>
+            <button onclick="fetchPostsByLabelFromBlogger('${activeTag.replace(/'/g, "\\'")}')" class="mt-3 px-3 py-1.5 rounded-lg bg-eco-500 text-white text-xs font-semibold hover:bg-eco-600">
+              Fetch "${activeTag}" from EcoClasses.in
+            </button>
+          </div>
+        `;
+      } else {
+        leftList.innerHTML = filteredLeft.map(post => {
+          const isSelected = currentPost && currentPost.id === post.id;
+          return `
+            <div onclick="openPostById('${post.id}')" 
+              class="p-3.5 rounded-xl cursor-pointer transition border ${isSelected ? 'bg-emerald-950/60 border-emerald-400 shadow-lg' : 'bg-slate-800/55 border-slate-700/60 hover:border-emerald-500/60'}">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-eco-500/25 text-emerald-300">
+                  ${post.tags[0] || 'Economics'}
+                </span>
+                ${post.isMcq ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">📝 MCQ Worksheet</span>' : ''}
+              </div>
+              <h3 class="font-bold text-sm leading-snug">${post.title}</h3>
+              <div class="flex flex-wrap gap-1 mt-2">
+                ${post.tags.slice(0, 3).map(t => `<span class="text-[10px] opacity-65 bg-slate-900/60 px-1.5 py-0.5 rounded">#${t}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Filter Practice/MCQ Posts for Right Panel
+      const practicePosts = allPosts.filter(post =>
+        post.isMcq || post.tags.some(t => TAG_GROUPS.practiceTags.map(x => x.toLowerCase()).includes(t.toLowerCase()))
+      );
+
+      mcqBadge.textContent = `${practicePosts.length} Worksheets`;
+
+      rightList.innerHTML = practicePosts.map(post => {
+        const isSelected = currentPost && currentPost.id === post.id;
+        return `
+          <div onclick="openPostById('${post.id}', true)" 
+            class="p-3.5 rounded-xl cursor-pointer transition border ${isSelected ? 'bg-emerald-950/60 border-amber-400 shadow-lg' : 'bg-slate-800/55 border-slate-700/60 hover:border-amber-400/60'}">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                <i class="fa-solid fa-circle-check"></i> Interactive Practice
+              </span>
+              <span class="text-[10px] opacity-60">${post.published}</span>
+            </div>
+            <h3 class="font-bold text-sm leading-snug">${post.title}</h3>
+            <div class="mt-2 flex items-center justify-between text-xs text-emerald-400 font-medium">
+              <span>Launch in 3D Reader →</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /********************************************************************
+     * 8. CENTER READER & AUTOMATIC INTERACTIVE MCQ PARSER
+     *    Matches EcoClasses' exact "Reveal Answer" green button style
+     ********************************************************************/
+    window.openPostById = function(postId, snapToCenter = false) {
+      const found = allPosts.find(p => p.id === postId);
+      if (!found) return;
+      currentPost = found;
+      renderCenterReader(found);
+      renderPostLists();
+      if (snapToCenter || window.innerWidth < 900) {
+        focusPanel('center');
+      }
+    };
+
+    function renderCenterReader(post) {
+      const readerEl = document.getElementById('center-reader-body');
+      const breadcrumbEl = document.getElementById('reader-breadcrumb');
+      const blogLinkEl = document.getElementById('open-original-post-link');
+      if (!readerEl) return;
+
+      breadcrumbEl.textContent = post.tags.slice(0, 3).join(' • ') || 'EcoClasses Study Portal';
+      blogLinkEl.href = post.url || BLOG_BASE_URL;
+
+      // Header Banner inside Reader
+      let html = `
+        <div class="mb-6 pb-4 border-b border-slate-700/60">
+          <div class="flex flex-wrap gap-1.5 mb-2.5">
+            ${post.tags.map(t => `
+              <button onclick="filterByTag('${t.replace(/'/g, "\\'")}')" class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-eco-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-eco-500 hover:text-white transition">
+                #${t}
+              </button>
+            `).join('')}
+          </div>
+          <h1 class="text-xl md:text-2xl font-black tracking-tight">${post.title}</h1>
+        </div>
+      `;
+
+      // If structured interactive questions array exists (or parsed from Blogger HTML)
+      if (post.questions && post.questions.length > 0) {
+        html += `
+          <div class="mb-4 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between text-xs">
+            <span>✨ <strong>Interactive EcoClasses Worksheet Mode:</strong> Click any option to check your answer or click <strong>Reveal Answer</strong>.</span>
+          </div>
+          <div class="space-y-4">
+            ${post.questions.map((item, qIdx) => `
+              <div class="mcq-card" id="mcq-card-${qIdx}">
+                <p class="font-bold text-base mb-3 leading-snug">${item.q}</p>
+                <div class="space-y-2">
+                  ${item.options.map((opt, optIdx) => `
+                    <button onclick="selectMcqOption(${qIdx}, ${optIdx}, ${item.correctIndex})" 
+                      id="mcq-opt-${qIdx}-${optIdx}"
+                      class="mcq-option-btn">
+                      <span>${opt}</span>
+                    </button>
+                  `).join('')}
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                  <button onclick="revealMcqAnswer(${qIdx}, ${item.correctIndex})" class="eco-reveal-btn text-xs">
+                    <span>Reveal Answer</span>
+                  </button>
+                  <span id="mcq-status-${qIdx}" class="text-xs font-bold"></span>
+                </div>
+                <div id="mcq-exp-${qIdx}" class="hidden mt-3 p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/30 text-xs text-emerald-200">
+                  <strong>✔ Correct Answer: ${item.options[item.correctIndex]}</strong>
+                  <p class="mt-1 opacity-90">${item.explanation || ''}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        // Render Full Blogger Post HTML & enhance any inline "Reveal Answer" buttons
+        html += `<div id="raw-blogger-content" class="space-y-4 leading-relaxed text-sm md:text-base">${post.content}</div>`;
+      }
+
+      readerEl.innerHTML = html;
+      readerEl.scrollTop = 0;
+
+      // Wire up any existing inline Blogger "Reveal Answer" buttons inside raw HTML posts
+      enhanceRawBloggerDOM(readerEl);
+    }
+
+    // Handles clicks on MCQ options
+    window.selectMcqOption = function(qIdx, chosenIdx, correctIdx) {
+      const card = document.getElementById(`mcq-card-${qIdx}`);
+      if (!card || card.dataset.answered === 'true') return;
+      card.dataset.answered = 'true';
+
+      const chosenBtn = document.getElementById(`mcq-opt-${qIdx}-${chosenIdx}`);
+      const correctBtn = document.getElementById(`mcq-opt-${qIdx}-${correctIdx}`);
+      const statusEl = document.getElementById(`mcq-status-${qIdx}`);
+      const expEl = document.getElementById(`mcq-exp-${qIdx}`);
+
+      mcqAttemptedCount++;
+      if (chosenIdx === correctIdx) {
+        mcqCorrectCount++;
+        if (chosenBtn) chosenBtn.classList.add('selected-correct');
+        if (statusEl) {
+          statusEl.textContent = '✅ Correct!';
+          statusEl.className = 'text-xs font-bold text-emerald-400';
+        }
+      } else {
+        if (chosenBtn) chosenBtn.classList.add('selected-wrong');
+        if (correctBtn) correctBtn.classList.add('selected-correct');
+        if (statusEl) {
+          statusEl.textContent = '❌ Incorrect';
+          statusEl.className = 'text-xs font-bold text-red-400';
+        }
+      }
+
+      if (expEl) expEl.classList.remove('hidden');
+      updateGlobalScoreUI();
+    };
+
+    // Matches the green "Reveal Answer" button from the user's EcoClasses screenshot
+    window.revealMcqAnswer = function(qIdx, correctIdx) {
+      const correctBtn = document.getElementById(`mcq-opt-${qIdx}-${correctIdx}`);
+      const expEl = document.getElementById(`mcq-exp-${qIdx}`);
+      if (correctBtn) correctBtn.classList.add('selected-correct');
+      if (expEl) expEl.classList.toggle('hidden');
+    };
+
+    window.resetCurrentWorksheet = function() {
+      if (currentPost) renderCenterReader(currentPost);
+    };
+
+    function updateGlobalScoreUI() {
+      const scoreEl = document.getElementById('global-mcq-score');
+      if (scoreEl) scoreEl.textContent = `${mcqCorrectCount} / ${mcqAttemptedCount}`;
+    }
+
+    // Enhances live Blogger HTML posts that already contain "Reveal Answer" buttons or plain-text options
+    function enhanceRawBloggerDOM(container) {
+      // Execute any inline scripts included in the Blogger post safely
+      const scripts = container.querySelectorAll('script');
+      scripts.forEach(oldScript => {
+        try {
+          const newScript = document.createElement('script');
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+          } else {
+            newScript.textContent = oldScript.textContent;
+          }
+          document.body.appendChild(newScript);
+        } catch (err) {
+          console.warn('Inline post script skipped:', err);
+        }
+      });
+
+      // Style any button containing "Reveal Answer" with EcoClasses green
+      const buttons = container.querySelectorAll('button, input[type="button"], a');
+      buttons.forEach(btn => {
+        if (btn.textContent && btn.textContent.toLowerCase().includes('reveal answer')) {
+          btn.classList.add('eco-reveal-btn');
+        }
+      });
+    }
+
+    /********************************************************************
+     * 9. LIVE BLOGGER JSONP CONNECTOR TO WWW.ECOCLASSES.IN
+     ********************************************************************/
+    window.onEcoClassesData = function(data) {
+      try {
+        const entries = (data && data.feed && data.feed.entry) ? data.feed.entry : [];
+        if (entries.length === 0) return;
+
+        const livePosts = entries.map((entry, idx) => {
+          const title = entry.title ? entry.title.$t : `EcoClasses Post #${idx + 1}`;
+          const rawContent = entry.content ? entry.content.$t : (entry.summary ? entry.summary.$t : '');
+          const tags = (entry.category || []).map(c => c.term);
+          const published = entry.published ? entry.published.$t.substring(0, 10) : '';
+          const linkObj = (entry.link || []).find(l => l.rel === 'alternate');
+          const url = linkObj ? linkObj.href : BLOG_BASE_URL;
+          const isMcq = tags.some(t => t.toLowerCase().includes('mcq') || t.toLowerCase().includes('worksheet')) ||
+                        title.toLowerCase().includes('mcq') ||
+                        rawContent.includes('Reveal Answer');
+
+          return {
+            id: `blogger-live-${idx}`,
+            title,
+            published,
+            url,
+            tags,
+            isMcq,
+            content: rawContent
+          };
+        });
+
+        // Merge live EcoClasses posts at the top, keeping the interactive 50-MCQ demo worksheet accessible
+        allPosts = [...livePosts, ...FALLBACK_POSTS];
+        currentPost = allPosts[0];
+
+        const badge = document.getElementById('feed-status-badge');
+        if (badge) {
+          badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live (${livePosts.length} Posts Synced)`;
+        }
+
+        renderPostLists();
+        renderCenterReader(currentPost);
+      } catch (err) {
+        console.warn('Error parsing Blogger feed:', err);
+      }
+    };
+
+    function fetchLiveEcoClassesFeed() {
+      const script = document.createElement('script');
+      script.src = `${BLOG_BASE_URL}/feeds/posts/default?alt=json-in-script&max-results=75&callback=onEcoClassesData`;
+      script.onerror = () => {
+        const badge = document.getElementById('feed-status-badge');
+        if (badge) {
+          badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Ready (EcoClasses Dataset)`;
+        }
+      };
+      document.body.appendChild(script);
+    }
+
+    // Fetch a specific Blogger label live when clicked
+    window.fetchPostsByLabelFromBlogger = function(label) {
+      const badge = document.getElementById('feed-status-badge');
+      if (badge) badge.textContent = `Fetching #${label}...`;
+      const script = document.createElement('script');
+      script.src = `${BLOG_BASE_URL}/feeds/posts/default/-/${encodeURIComponent(label)}?alt=json-in-script&max-results=50&callback=onEcoClassesData`;
+      document.body.appendChild(script);
+    };
+
+    /********************************************************************
+     * 10. BOTTOM DOCK ACTIONS, VOICE NAV, 2D/3D MODE & THEME TOGGLE
+     ********************************************************************/
+    window.dockAction = function(action) {
+      if (action === 'home') {
+        activeTag = 'ALL';
+        renderLeftTagCloud();
+        renderPostLists();
+        focusPanel('overview');
+      } else if (action === 'syllabus') {
+        switchLeftTab('exams');
+        focusPanel('left');
+      } else if (action === 'search') {
+        focusPanel('left');
+        setTimeout(() => {
+          const input = document.getElementById('eco-search-input');
+          if (input) input.focus();
+        }, 300);
+      } else if (action === 'practice') {
+        focusPanel('right');
+      } else if (action === 'economists') {
+        switchLeftTab('economists');
+        focusPanel('left');
+      } else if (action === 'voice') {
+        startVoiceNavigation();
+      }
+    };
+
+    // Voice Search & Navigation (Matches EcoClasses "VOICE NAV" bottom bar icon)
+    function startVoiceNavigation() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const labelEl = document.getElementById('voice-nav-label');
+      if (!SpeechRecognition) {
+        if (labelEl) labelEl.textContent = 'No Mic API';
+        setTimeout(() => { if (labelEl) labelEl.textContent = 'Voice Nav'; }, 2000);
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-IN';
+      if (labelEl) labelEl.textContent = 'Listening...';
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        const searchInput = document.getElementById('eco-search-input');
+        if (searchInput) {
+          searchInput.value = transcript;
+          searchQuery = transcript;
+          renderPostLists();
+          focusPanel('left');
+        }
+        if (labelEl) labelEl.textContent = 'Voice Nav';
+      };
+      recognition.onerror = () => {
+        if (labelEl) labelEl.textContent = 'Voice Nav';
+      };
+      recognition.start();
+    }
+
+    // Search Input Listener
+    const searchInputEl = document.getElementById('eco-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim();
+        if (clearSearchBtn) clearSearchBtn.classList.toggle('hidden', !searchQuery);
+        renderPostLists();
+      });
+    }
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        searchQuery = '';
+        searchInputEl.value = '';
+        clearSearchBtn.classList.add('hidden');
+        renderPostLists();
+      });
+    }
+
+    // Toggle Dark / Light Theme
+    window.toggleTheme = function() {
+      const body = document.body;
+      const isDark = body.classList.contains('dark-theme');
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (isDark) {
+        body.classList.remove('dark-theme');
+        body.classList.add('light-theme');
+        if (icon) icon.className = 'fa-solid fa-sun';
+        if (text) text.textContent = 'Dark';
+      } else {
+        body.classList.remove('light-theme');
+        body.classList.add('dark-theme');
+        if (icon) icon.className = 'fa-solid fa-moon';
+        if (text) text.textContent = 'Light';
+      }
+    };
+
+    // Toggle 3D Cockpit vs 2D Lite Grid View
+    window.toggleDimensionMode = function() {
+      is2DMode = !is2DMode;
+      const label = document.getElementById('dimension-label');
+      const camBar = document.getElementById('camera-controls-bar');
+
+      if (is2DMode) {
+        document.body.classList.add('mode-2d');
+        if (label) label.textContent = '3D Cockpit';
+        if (camBar) camBar.classList.add('hidden');
+
+        // Move DOM panels into responsive 2D slots
+        leftPanelDOM.style.width = '100%';
+        leftPanelDOM.style.height = '100%';
+        centerPanelDOM.style.width = '100%';
+        centerPanelDOM.style.height = '100%';
+        rightPanelDOM.style.width = '100%';
+        rightPanelDOM.style.height = '100%';
+
+        document.getElementById('lite-left-slot').appendChild(leftPanelDOM);
+        document.getElementById('lite-center-slot').appendChild(centerPanelDOM);
+        document.getElementById('lite-right-slot').appendChild(rightPanelDOM);
+      } else {
+        document.body.classList.remove('mode-2d');
+        if (label) label.textContent = '2D Lite';
+        if (camBar) camBar.classList.remove('hidden');
+
+        // Restore 3D Panel dimensions and re-attach to CSS3DObjects
+        leftPanelDOM.style.width = '460px';
+        leftPanelDOM.style.height = '720px';
+        centerPanelDOM.style.width = '720px';
+        centerPanelDOM.style.height = '740px';
+        rightPanelDOM.style.width = '460px';
+        rightPanelDOM.style.height = '720px';
+
+        leftCSSObj.element = leftPanelDOM;
+        centerCSSObj.element = centerPanelDOM;
+        rightCSSObj.element = rightPanelDOM;
+        css3dScene.add(leftCSSObj, centerCSSObj, rightCSSObj);
+      }
+    };
+
+    // Modal & Clipboard Helpers
+    window.openInstallModal = function() {
+      const m = document.getElementById('install-modal');
+      if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    };
+    window.closeInstallModal = function() {
+      const m = document.getElementById('install-modal');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    };
+    window.copySnippet = function() {
+      const code = document.getElementById('blogger-snippet-code').innerText;
+      const textarea = document.createElement('textarea');
+      textarea.value = code;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      const btn = document.getElementById('copy-snippet-btn');
+      if (btn) {
+        btn.textContent = '✔ Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Snippet'; }, 2000);
+      }
+    };
+
+    /********************************************************************
+     * 11. ANIMATION LOOP & WINDOW RESIZE HANDLER
+     ********************************************************************/
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!is2DMode) {
+        // Smooth camera interpolation when clicking panel buttons
+        if (isCameraTransitioning) {
+          camera.position.lerp(targetCameraPos, 0.08);
+          controls.target.lerp(targetLookAt, 0.08);
+          if (camera.position.distanceTo(targetCameraPos) < 2) {
+            isCameraTransitioning = false;
+          }
+        }
+
+        // Subtle floating animation on background 3D Economics shapes
+        const time = performance.now() * 0.001;
+        floatingShapes.forEach(mesh => {
+          mesh.rotation.x += 0.003;
+          mesh.rotation.y += 0.005;
+          mesh.position.y += Math.sin(time + mesh.userData.offset) * 0.35;
+        });
+
+        controls.update();
+        webglRenderer.render(webglScene, camera);
+        css3dRenderer.render(css3dScene, camera);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      webglRenderer.setSize(window.innerWidth, window.innerHeight);
+      css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Initialize UI & Start Loop on Window Load
+    window.onload = function() {
+      renderLeftTagCloud();
+      renderPostLists();
+      renderCenterReader(currentPost);
+      fetchLiveEcoClassesFeed();
+      animate();
+    };
+  </script>
+</body>
+</html>
